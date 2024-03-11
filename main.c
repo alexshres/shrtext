@@ -18,8 +18,9 @@ void disableRawMode();
 int main() {
   enableRawMode();
 
-  char c;
-  while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+  while (1) {
+    char c = '\0';
+    read(STDIN_FILENO, &c, 1);
     /*
        Printing out each byte that we read()
        We will print each character's numeric ASCII value
@@ -31,6 +32,8 @@ int main() {
       printf("%d\r\n", c);        // Ctrl-A will print it's ASCII value (1-26 for Cntrl combinations)
     else
       printf("%d ('%c')\r\n", c, c);
+
+    if (c == 'q') break;
   }
   return 0;
 }
@@ -69,6 +72,18 @@ void enableRawMode() {
   raw.c_oflag &= !~(OPOST);
   raw.c_cflag &= ~(CS8);
   raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+
+
+  /*
+  * Sets a timeout so that read() returns if it doesn't get any input for a certain amount of time
+  * VMIN sets the minimum number of bytes of input needed before read() can return
+  *     VMIN = 0 meaans read() returns as soon as there is any input to be read 
+  * VTIME sets the mximum amount of time to wait before read() returns it is in tenths of a second
+  *     VTIME = 1 means we are setting time to 1/10 of a second or 100 milliseconeds
+  * If read() times out it will return 0
+  */
+  raw.c_cc[VMIN] = 0;
+  raw.c_cc[VTIME] = 1;
 
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
