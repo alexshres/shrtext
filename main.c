@@ -5,6 +5,11 @@
 #include <unistd.h>
 #include <termios.h>
 
+/***** defines *****/
+// How Ctrl works in general sets top 3 bits to 0 and the 5 rest of the bits
+// to what it was before
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 // Saving the initial termios state in struct 
 struct termios orig_termios;
 
@@ -19,26 +24,21 @@ void disableRawMode();
 // Enabling error handling 
 void die(const char* s);
 
+// Function that waits for one keypress and returns it
+char editorReadKey();
+
+// Waits for a keypress then handles it
+// Will end up mapping various <Ctrl> key combinations and other
+// special keys to different editor functions
+void editorProcessKeypress();
+
 int main() {
   enableRawMode();
 
-  while (1) {
-    char c = '\0';
-    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
-    /*
-       Printing out each byte that we read()
-       We will print each character's numeric ASCII value
-       and the character it represents
-    */
-    
-    // Tests whether a character is a control character (nonprintable characters)
-    if (iscntrl(c)) 
-      printf("%d\r\n", c);        // Ctrl-A will print it's ASCII value (1-26 for Cntrl combinations)
-    else
-      printf("%d ('%c')\r\n", c, c);
+  while(1) {
+      editorProcessKeypress();
+    }
 
-    if (c == 'q') break;
-  }
   return 0;
 }
 
@@ -102,4 +102,25 @@ void disableRawMode() {
 void die(const char* s) {
   perror(s);
   exit(1);
+}
+
+char editorReadKey() {
+  int nread;
+  char c;
+
+  while ( (nread = read(STDIN_FILENO, &c, 1)) != -1)
+    if (nread == -1 && errno != EAGAIN) die("read");
+
+  return c;
+}
+
+
+void editorProcessKeypress() {
+  char c = editorReadKey();
+
+  switch (c) {
+    case CTRL_KEY('q'):
+      exit(0);
+      break;
+  }
 }
