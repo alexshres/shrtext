@@ -32,19 +32,40 @@ char editorReadKey();
 // special keys to different editor functions
 void editorProcessKeypress();
 
+// Render the editor's user interface to the screen by clearing the screen
+void editorRefreshScreen();
+
 int main() {
   enableRawMode();
 
   while(1) {
-      editorProcessKeypress();
-    }
+    editorProcessKeypress();
+  }
 
   return 0;
 }
 
+/*
+int main() {
+  enableRawMode();
+
+  while(1) {
+    char c = '\0';
+    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
+    if (iscntrl(c)) 
+      printf("%d\r\n", c);
+    else 
+      printf("%d ('%c')\r\n", c, c);
+
+    if (c == CTRL_KEY('q')) break;
+  }
+
+  return 0;
+}
+*/
+
 void enableRawMode() {
-  if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
-    die("tcgetattr");
+  if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr");
   atexit(disableRawMode);
 
   struct termios raw = orig_termios;
@@ -73,10 +94,10 @@ void enableRawMode() {
   OPOST bitflag is similar to the ICRNL bitflag except for output since "\n" is translated to "\r\n"
   */
 
-  raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);
-  raw.c_oflag &= !~(OPOST);
-  raw.c_cflag &= ~(CS8);
-  raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+  raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+  raw.c_oflag &= ~(OPOST);
+  raw.c_cflag |= (CS8);
+  raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 
 
   /*
@@ -90,8 +111,7 @@ void enableRawMode() {
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 1;
 
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
-    die("tcsetattr");
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
 void disableRawMode() {
@@ -100,6 +120,8 @@ void disableRawMode() {
 }
 
 void die(const char* s) {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
   perror(s);
   exit(1);
 }
@@ -108,19 +130,34 @@ char editorReadKey() {
   int nread;
   char c;
 
-  while ( (nread = read(STDIN_FILENO, &c, 1)) != -1)
+  while ((nread = read(STDIN_FILENO, &c, 1)) != -1) {
     if (nread == -1 && errno != EAGAIN) die("read");
+  }
 
   return c;
 }
 
-
 void editorProcessKeypress() {
   char c = editorReadKey();
 
-  switch (c) {
+  switch(c) {
     case CTRL_KEY('q'):
+      write(STDOUT_FILENO, "\x1b[2J", 4);
+      write(STDOUT_FILENO, "\x1b[H", 3);
       exit(0);
       break;
   }
+}
+
+void editorRefreshScreen() {
+  // writing 4 bytes out to the terminal
+  // \x1b is the escape character (27 in decimal)
+  // arg is 2 and J says clear, 2 tells us to clear the
+  // whole screen
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  // H positions the cursor
+  write(STDOUT_FILENO, "\x1b[H", 3);
+
+
+
 }
