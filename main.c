@@ -52,11 +52,6 @@ int main() {
   while(1) {
     char c = '\0';
     if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
-    if (iscntrl(c)) 
-      printf("%d\r\n", c);
-    else 
-      printf("%d ('%c')\r\n", c, c);
-
     if (c == CTRL_KEY('q')) break;
   }
 
@@ -127,12 +122,16 @@ void die(const char* s) {
 }
 
 char editorReadKey() {
-  int nread;
-  char c;
+//  int nread;
+  char c = '\0';
 
+  /*
   while ((nread = read(STDIN_FILENO, &c, 1)) != -1) {
     if (nread == -1 && errno != EAGAIN) die("read");
   }
+  */
+
+  if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
 
   return c;
 }
@@ -150,14 +149,13 @@ void editorProcessKeypress() {
 }
 
 void editorRefreshScreen() {
-  // writing 4 bytes out to the terminal
-  // \x1b is the escape character (27 in decimal)
-  // arg is 2 and J says clear, 2 tells us to clear the
-  // whole screen
+  /*
+   writing 4 bytes out to the terminal
+   \x1b is the escape character (27 in decimal)
+   arg is 2 and J says clear, 2 tells us to clear the
+   whole screen
+  */
   write(STDOUT_FILENO, "\x1b[2J", 4);
   // H positions the cursor
   write(STDOUT_FILENO, "\x1b[H", 3);
-
-
-
 }
