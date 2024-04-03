@@ -35,6 +35,10 @@ void editorProcessKeypress();
 // Render the editor's user interface to the screen by clearing the screen
 void editorRefreshScreen();
 
+// Drawing a column of tildes (~) on LHS of the screen similar to vim 
+void editorDrawRows();
+
+
 int main() {
   enableRawMode();
 
@@ -44,20 +48,6 @@ int main() {
 
   return 0;
 }
-
-/*
-int main() {
-  enableRawMode();
-
-  while(1) {
-    char c = '\0';
-    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
-    if (c == CTRL_KEY('q')) break;
-  }
-
-  return 0;
-}
-*/
 
 void enableRawMode() {
   if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr");
@@ -158,4 +148,13 @@ void editorRefreshScreen() {
   write(STDOUT_FILENO, "\x1b[2J", 4);
   // H positions the cursor
   write(STDOUT_FILENO, "\x1b[H", 3);
+
+  editorDrawRows();
+  write(STDOUT_FILENO, "\x1b[H", 3);
+}
+
+void editorDrawRows() {
+  int y;
+  for (y = 0; y < 24; y++)
+    write(STDOUT_FILENO, "~\r\n", 3);
 }
